@@ -1,10 +1,11 @@
 (function () {
+  // Ambil objek konfigurasi dari window
   const config = window.aDcnfg || {};
   const maxClaps = config.maxClaps || 50;
   const toastClapTpl = config.toastClapText || 'Clap <span>+{count}</span>';
-  const toastMaxTpl = config.toastMaxText || 'Mencapai batas <span>{max} claps</span>!';
+  const toastMaxTpl = config.toastMaxText || 'You have reached the maximum limit of <span>{max} claps</span>!';
 
-  // Format Angka Shortener (1K, 1M)
+  // Format Angka (1K, 1M atau 1.000)
   function formatNum(num) {
     num = Number(num) || 0;
     if (config.abbreviation === "0") return num.toLocaleString();
@@ -13,8 +14,8 @@
     return num.toString();
   }
 
-  // Muat Firebase SDK Otomatis Jika Belum Ada
-  function ensureFirebase(callback) {
+  // Auto Load Firebase SDK jika belum ada di blog
+  function loadFirebase(callback) {
     if (window.firebase && window.firebase.database) {
       callback();
       return;
@@ -30,12 +31,15 @@
     document.head.appendChild(appScript);
   }
 
-  function initWidget() {
+  function startWidget() {
     const firebaseConfig = config.firebaseConfig || {
       apiKey: "AIzaSyD7PahP7tTQGor7HRJv64UZLSk0V9L-PR0",
       authDomain: "like-viewcnt.firebaseapp.com",
       databaseURL: config.firebaseUrl || "https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "like-viewcnt"
+      projectId: "like-viewcnt",
+      storageBucket: "like-viewcnt.firebasestorage.app",
+      messagingSenderId: "830097036905",
+      appId: "1:830097036905:web:7cded7c93a5b658d3eb4f8"
     };
 
     if (!firebase.apps.length) {
@@ -43,18 +47,10 @@
     }
     const db = firebase.database();
 
-    // Deteksi ID Post (Blogger ID atau Clean Path URL)
-    function getPostId() {
-      const el = document.querySelector(".apmody-view-static") || document.querySelector(".aDv");
-      const attrId = el ? el.getAttribute("data-id") : null;
-      if (attrId && attrId !== "undefined" && attrId !== "null" && attrId.trim() !== "") {
-        return attrId.replace(/[^a-zA-Z0-9_-]/g, "_");
-      }
-      const cleanPath = window.location.pathname.replace(/\/$/, "").replace(/^\//, "");
-      return cleanPath ? cleanPath.replace(/[^a-zA-Z0-9_-]/g, "_") : "homepage";
-    }
+    // Mengambil Post ID
+    let cleanPath = window.location.pathname.replace(/\/$/, "");
+    let postId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9]/g, "_") : "homepage";
 
-    const postId = getPostId();
     const clapRef = db.ref("posts/" + postId + "/claps");
     const viewRef = db.ref("posts/" + postId + "/views");
 
@@ -69,40 +65,43 @@
     let toastTimeout = null;
     let currentGlobalClaps = 0;
 
-    // Scroll & Window Check (Muncul Otomatis jika Halaman Pendek)
-    function checkScroll() {
+    // Logic Scroll Munculkan Tombol
+    function handleScroll() {
       if (!clapBtnElement) return;
       const scrollPos = window.pageYOffset || document.documentElement.scrollTop || 0;
       const isShortPage = document.documentElement.scrollHeight <= window.innerHeight + 50;
+
       if (scrollPos > 30 || isShortPage) {
         clapBtnElement.classList.add("visible");
       } else {
         clapBtnElement.classList.remove("visible");
       }
     }
-    window.addEventListener("scroll", checkScroll, { passive: true });
-    window.addEventListener("resize", checkScroll, { passive: true });
-    checkScroll();
 
-    // Increment View Count (Per Sesi Browser)
-    const sessionViewKey = "apmody_viewed_" + postId;
-    if (!sessionStorage.getItem(sessionViewKey)) {
-      sessionStorage.setItem(sessionViewKey, "true");
-      viewRef.transaction(currentViews => (currentViews || 0) + 1);
-    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll, { passive: true });
+    handleScroll();
 
-    // Realtime Listener Views & Claps
-    viewRef.on("value", snapshot => {
-      const totalViews = snapshot.val() || 0;
-      if (viewTotalEl) viewTotalEl.innerText = formatNum(totalViews);
-    });
-
+    // Listener Realtime Clap
     clapRef.on("value", snapshot => {
       currentGlobalClaps = snapshot.val() || 0;
       if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
     });
 
-    // Daftarkan triggerClap ke window agar onclick="triggerClap()" berjalan
+    // Logika View Count
+    let sessionViewKey = "apmody_viewed_" + postId;
+    if (!sessionStorage.getItem(sessionViewKey)) {
+      sessionStorage.setItem(sessionViewKey, "true");
+      viewRef.transaction(currentViews => (currentViews || 0) + 1);
+    }
+
+    // Listener Realtime View
+    viewRef.on("value", snapshot => {
+      let totalViews = snapshot.val() || 0;
+      if (viewTotalEl) viewTotalEl.innerText = formatNum(totalViews);
+    });
+
+    // PENTING: Mengekspos triggerClap ke window agar onclick="triggerClap()" HTML bisa memanggilnya
     window.triggerClap = function () {
       if (userClapsGiven >= currentGlobalClaps) {
         userClapsGiven = currentGlobalClaps;
@@ -133,14 +132,18 @@
       setTimeout(() => particle.remove(), 800);
     }
 
-    function showToast(htmlContent, duration) {
+    function showToast(htmlMsg, duration) {
       if (!toastEl || !toastTextContent) return;
-      toastTextContent.innerHTML = htmlContent;
+      toastTextContent.innerHTML = htmlMsg;
       toastEl.classList.add("show");
+
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => toastEl.classList.remove("show"), duration);
+      toastTimeout = setTimeout(() => {
+        toastEl.classList.remove("show");
+      }, duration);
     }
   }
 
-  ensureFirebase(initWidget);
+  // Jalankan saat dokumen siap
+  loadFirebase(startWidget);
 })();
