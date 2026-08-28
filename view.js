@@ -4,7 +4,7 @@
   const toastClapTpl = config.toastClapText || 'Clap <span>+{count}</span>';
   const toastMaxTpl = config.toastMaxText || 'Mencapai batas <span>{max} claps</span>!';
 
-  // Format Angka (1K, 1M)
+  // Format Angka Shortener (1K, 1M)
   function formatNum(num) {
     num = Number(num) || 0;
     if (config.abbreviation === "0") return num.toLocaleString();
@@ -13,7 +13,7 @@
     return num.toString();
   }
 
-  // Auto-Load Firebase SDK secara Asinkron (Mencegah Race Condition)
+  // Muat Firebase SDK Otomatis Jika Belum Ada
   function ensureFirebase(callback) {
     if (window.firebase && window.firebase.database) {
       callback();
@@ -31,7 +31,6 @@
   }
 
   function initWidget() {
-    // Konfigurasi Firebase Default / Custom
     const firebaseConfig = config.firebaseConfig || {
       apiKey: "AIzaSyD7PahP7tTQGor7HRJv64UZLSk0V9L-PR0",
       authDomain: "like-viewcnt.firebaseapp.com",
@@ -44,9 +43,9 @@
     }
     const db = firebase.database();
 
-    // Sanitasi Post ID (Kompatibel dengan Artikel & Halaman Statis)
+    // Deteksi ID Post (Blogger ID atau Clean Path URL)
     function getPostId() {
-      const el = document.querySelector(".aDv") || document.querySelector(".apmody-view-static");
+      const el = document.querySelector(".apmody-view-static") || document.querySelector(".aDv");
       const attrId = el ? el.getAttribute("data-id") : null;
       if (attrId && attrId !== "undefined" && attrId !== "null" && attrId.trim() !== "") {
         return attrId.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -59,24 +58,23 @@
     const clapRef = db.ref("posts/" + postId + "/claps");
     const viewRef = db.ref("posts/" + postId + "/views");
 
-    // Selektor Elemen (Mendukung ID lama & baru)
-    const viewTotalEl = document.getElementById("aDvTotal") || document.getElementById("viewTotalCount");
-    const clapTotalEl = document.getElementById("aDcTotal") || document.getElementById("clapTotalCount");
-    const clapBtnElement = document.getElementById("aDcBtn") || document.getElementById("apmodyClapBtn");
-    const toastEl = document.getElementById("aDt") || document.getElementById("apmodyToast");
-    const toastTextContent = document.getElementById("aDtText") || document.getElementById("toastTextContent");
+    const clapTotalEl = document.getElementById("clapTotalCount") || document.getElementById("aDcTotal");
+    const viewTotalEl = document.getElementById("viewTotalCount") || document.getElementById("aDvTotal");
+    const toastEl = document.getElementById("apmodyToast") || document.getElementById("aDt");
+    const toastTextContent = document.getElementById("toastTextContent") || document.getElementById("aDtText");
+    const clapBtnElement = document.getElementById("apmodyClapBtn") || document.getElementById("aDcBtn");
 
-    let userClapKey = "aDc_claps_" + postId;
+    let userClapKey = "apmody_claps_" + postId;
     let userClapsGiven = parseInt(localStorage.getItem(userClapKey)) || 0;
     let toastTimeout = null;
     let currentGlobalClaps = 0;
 
-    // Deteksi Scroll
+    // Scroll & Window Check (Muncul Otomatis jika Halaman Pendek)
     function checkScroll() {
       if (!clapBtnElement) return;
-      const scrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const scrollPos = window.pageYOffset || document.documentElement.scrollTop || 0;
       const isShortPage = document.documentElement.scrollHeight <= window.innerHeight + 50;
-      if (scrollPos > 20 || isShortPage) {
+      if (scrollPos > 30 || isShortPage) {
         clapBtnElement.classList.add("visible");
       } else {
         clapBtnElement.classList.remove("visible");
@@ -86,26 +84,25 @@
     window.addEventListener("resize", checkScroll, { passive: true });
     checkScroll();
 
-    // Logika View Count Transaction
-    const sessionViewKey = "aDv_viewed_" + postId;
+    // Increment View Count (Per Sesi Browser)
+    const sessionViewKey = "apmody_viewed_" + postId;
     if (!sessionStorage.getItem(sessionViewKey)) {
       sessionStorage.setItem(sessionViewKey, "true");
       viewRef.transaction(currentViews => (currentViews || 0) + 1);
     }
 
-    // Realtime Listener View
+    // Realtime Listener Views & Claps
     viewRef.on("value", snapshot => {
       const totalViews = snapshot.val() || 0;
       if (viewTotalEl) viewTotalEl.innerText = formatNum(totalViews);
     });
 
-    // Realtime Listener Clap
     clapRef.on("value", snapshot => {
       currentGlobalClaps = snapshot.val() || 0;
       if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
     });
 
-    // Handler Trigger Clap
+    // Daftarkan triggerClap ke window agar onclick="triggerClap()" berjalan
     window.triggerClap = function () {
       if (userClapsGiven >= currentGlobalClaps) {
         userClapsGiven = currentGlobalClaps;
@@ -130,7 +127,7 @@
     function showParticleEffect() {
       if (!clapBtnElement) return;
       const particle = document.createElement("div");
-      particle.className = "aDc-particle clap-particle";
+      particle.className = "clap-particle";
       particle.innerText = "+1";
       clapBtnElement.appendChild(particle);
       setTimeout(() => particle.remove(), 800);
@@ -145,12 +142,5 @@
     }
   }
 
-  // Eksekusi widget setelah Firebase SDK siap
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
-      ensureFirebase(initWidget);
-    });
-  } else {
-    ensureFirebase(initWidget);
-  }
+  ensureFirebase(initWidget);
 })();
