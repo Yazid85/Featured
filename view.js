@@ -12,7 +12,7 @@
     return num.toString();
   }
 
-  function init() {
+  function initWidget() {
     const firebaseConfig = {
       apiKey: "AIzaSyD7PahP7tTQGor7HRJv64UZLSk0V9L-PR0",
       authDomain: "like-viewcnt.firebaseapp.com",
@@ -25,8 +25,10 @@
     }
 
     const db = firebase.database();
-    let cleanPath = window.location.pathname.replace(/\/$/, "");
-    let postId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9]/g, "_") : "homepage";
+    
+    // Clean PATH: Hapus karakter ilegal untuk Firebase ID (. # $ [ ] /)
+    let cleanPath = window.location.pathname.replace(/^\/|\/$/g, '');
+    let postId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
 
     const clapRef = db.ref("posts/" + postId + "/claps");
     const viewRef = db.ref("posts/" + postId + "/views");
@@ -42,7 +44,7 @@
     let toastTimeout = null;
     let currentGlobalClaps = 0;
 
-    // Scroll Control
+    // Scroll Logic
     function checkScroll() {
       if (!clapBtnElement) return;
       const scrollPos = window.pageYOffset || document.documentElement.scrollTop || 0;
@@ -76,7 +78,7 @@
       if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
     });
 
-    // PENTING: Menghubungkan triggerClap ke window agar onclick berjalan
+    // Ekspos Fungsi ke Global (Window)
     window.triggerClap = function () {
       if (userClapsGiven >= currentGlobalClaps) {
         userClapsGiven = currentGlobalClaps;
@@ -116,9 +118,10 @@
     }
   }
 
+  // Panggil init saat DOM & Firebase siap
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", initWidget);
   } else {
-    init();
+    initWidget();
   }
 })();
