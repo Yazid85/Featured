@@ -1,6 +1,5 @@
 (function () {
   const config = window.aDcnfg || {};
-  const firebaseUrl = config.firebaseUrl || "https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app";
   const maxClaps = config.maxClaps || 50;
   const toastClapTpl = config.toastClapText || 'Clap <span>+{count}</span>';
   const toastMaxTpl = config.toastMaxText || 'Mencapai batas <span>{max} claps</span>!';
@@ -14,41 +13,65 @@
     return num.toString();
   }
 
-  function initWidget() {
-    if (typeof firebase === "undefined") {
-      console.error("aDcnfg: Firebase SDK belum dimuat.");
+  // Auto-Load Firebase SDK secara Asinkron (Mencegah Race Condition)
+  function ensureFirebase(callback) {
+    if (window.firebase && window.firebase.database) {
+      callback();
       return;
     }
+    const appScript = document.createElement("script");
+    appScript.src = "https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js";
+    appScript.onload = function () {
+      const dbScript = document.createElement("script");
+      dbScript.src = "https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js";
+      dbScript.onload = callback;
+      document.head.appendChild(dbScript);
+    };
+    document.head.appendChild(appScript);
+  }
+
+  function initWidget() {
+    // Konfigurasi Firebase Default / Custom
+    const firebaseConfig = config.firebaseConfig || {
+      apiKey: "AIzaSyD7PahP7tTQGor7HRJv64UZLSk0V9L-PR0",
+      authDomain: "like-viewcnt.firebaseapp.com",
+      databaseURL: config.firebaseUrl || "https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "like-viewcnt"
+    };
 
     if (!firebase.apps.length) {
-      firebase.initializeApp({ databaseURL: firebaseUrl });
+      firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.database();
 
-    // Penentuan ID Post
-    const viewStaticEl = document.querySelector(".aDv");
-    const attrId = viewStaticEl ? viewStaticEl.getAttribute("data-id") : null;
-    const cleanPath = window.location.pathname.replace(/\/$/, "").replace(/^\//, "");
-    const fallbackId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9_-]/g, "_") : "homepage";
-    const postId = (attrId && attrId !== "undefined" && attrId.trim() !== "") 
-      ? attrId.replace(/[^a-zA-Z0-9_-]/g, "_") 
-      : fallbackId;
+    // Sanitasi Post ID (Kompatibel dengan Artikel & Halaman Statis)
+    function getPostId() {
+      const el = document.querySelector(".aDv") || document.querySelector(".apmody-view-static");
+      const attrId = el ? el.getAttribute("data-id") : null;
+      if (attrId && attrId !== "undefined" && attrId !== "null" && attrId.trim() !== "") {
+        return attrId.replace(/[^a-zA-Z0-9_-]/g, "_");
+      }
+      const cleanPath = window.location.pathname.replace(/\/$/, "").replace(/^\//, "");
+      return cleanPath ? cleanPath.replace(/[^a-zA-Z0-9_-]/g, "_") : "homepage";
+    }
 
+    const postId = getPostId();
     const clapRef = db.ref("posts/" + postId + "/claps");
     const viewRef = db.ref("posts/" + postId + "/views");
 
-    const clapTotalEl = document.getElementById("aDcTotal");
-    const viewTotalEl = document.getElementById("aDvTotal");
-    const toastEl = document.getElementById("aDt");
-    const toastTextContent = document.getElementById("aDtText");
-    const clapBtnElement = document.getElementById("aDcBtn");
+    // Selektor Elemen (Mendukung ID lama & baru)
+    const viewTotalEl = document.getElementById("aDvTotal") || document.getElementById("viewTotalCount");
+    const clapTotalEl = document.getElementById("aDcTotal") || document.getElementById("clapTotalCount");
+    const clapBtnElement = document.getElementById("aDcBtn") || document.getElementById("apmodyClapBtn");
+    const toastEl = document.getElementById("aDt") || document.getElementById("apmodyToast");
+    const toastTextContent = document.getElementById("aDtText") || document.getElementById("toastTextContent");
 
     let userClapKey = "aDc_claps_" + postId;
     let userClapsGiven = parseInt(localStorage.getItem(userClapKey)) || 0;
     let toastTimeout = null;
     let currentGlobalClaps = 0;
 
-    // Scroll Handler (Otomatis tampil jika halaman pendek)
+    // Deteksi Scroll
     function checkScroll() {
       if (!clapBtnElement) return;
       const scrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -63,15 +86,16 @@
     window.addEventListener("resize", checkScroll, { passive: true });
     checkScroll();
 
-    // Realtime Listener & Transaction View Count
-    let sessionViewKey = "aDv_viewed_" + postId;
+    // Logika View Count Transaction
+    const sessionViewKey = "aDv_viewed_" + postId;
     if (!sessionStorage.getItem(sessionViewKey)) {
       sessionStorage.setItem(sessionViewKey, "true");
       viewRef.transaction(currentViews => (currentViews || 0) + 1);
     }
 
+    // Realtime Listener View
     viewRef.on("value", snapshot => {
-      let totalViews = snapshot.val() || 0;
+      const totalViews = snapshot.val() || 0;
       if (viewTotalEl) viewTotalEl.innerText = formatNum(totalViews);
     });
 
@@ -81,7 +105,7 @@
       if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
     });
 
-    // Trigger Clap Button
+    // Handler Trigger Clap
     window.triggerClap = function () {
       if (userClapsGiven >= currentGlobalClaps) {
         userClapsGiven = currentGlobalClaps;
@@ -106,7 +130,7 @@
     function showParticleEffect() {
       if (!clapBtnElement) return;
       const particle = document.createElement("div");
-      particle.className = "aDc-particle";
+      particle.className = "aDc-particle clap-particle";
       particle.innerText = "+1";
       clapBtnElement.appendChild(particle);
       setTimeout(() => particle.remove(), 800);
@@ -121,9 +145,12 @@
     }
   }
 
+  // Eksekusi widget setelah Firebase SDK siap
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initWidget);
+    document.addEventListener("DOMContentLoaded", function () {
+      ensureFirebase(initWidget);
+    });
   } else {
-    initWidget();
+    ensureFirebase(initWidget);
   }
 })();
