@@ -1,20 +1,22 @@
-  (function () {
-  const config = window.viCfg || {};
+(function () {
+  const config = window.aDcnfg || {};
   if (!config.firebaseUrl) {
-    console.warn("aDva: firebaseUrl belum diatur.");
+    console.warn("aDcnfg: firebaseUrl belum diatur.");
     return;
   }
 
   const baseUrl = config.firebaseUrl.replace(/\/$/, "");
   const maxClaps = config.maxClaps || 50;
 
-  // Penentuan ID Pos (Otomatis dari data-id atau URL pathname)
-  const viewStaticEl = document.querySelector(".viewC");
-  const viewEl = document.getElementById("vTc");
-  const clapEl = document.getElementById("clapTotalCount");
-  const clapBtn = document.getElementById("cBt");
-  const toastEl = document.getElementById("nTf");
-  const toastText = document.getElementById("toastTextContent");
+  const toastClapTpl = config.toastClapText || 'Clap <span>+{count}</span>';
+  const toastMaxTpl = config.toastMaxText || 'Mencapai batas <span>{max} claps</span>!';
+
+  const viewStaticEl = document.querySelector(".aDv");
+  const viewEl = document.getElementById("aDvTotal");
+  const clapEl = document.getElementById("aDcTotal");
+  const clapBtn = document.getElementById("aDcBtn");
+  const toastEl = document.getElementById("aDt");
+  const toastText = document.getElementById("aDtText");
 
   const cleanPath = window.location.pathname.replace(/\/$/, "");
   const fallbackId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9]/g, "_") : "homepage";
@@ -24,7 +26,6 @@
   let currentGlobalClaps = 0;
   let toastTimeout = null;
 
-  // Format Angka (1K, 1M)
   function formatNum(num) {
     if (config.abbreviation === "0") return num.toLocaleString();
     if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -32,7 +33,7 @@
     return num.toString();
   }
 
-  // 1. Efek Scroll Tombol Floating
+  // 1. Scroll Effect Floating Clap Button
   if (clapBtn) {
     window.addEventListener("scroll", () => {
       if (window.scrollY > 150) {
@@ -40,10 +41,10 @@
       } else {
         clapBtn.classList.remove("visible");
       }
-    });
+    }, { passive: true });
   }
 
-  // 2. Realtime Listener Tanpa SDK (Menggunakan Native EventSource)
+  // 2. Realtime EventSource Listener (Native Browser)
   if (typeof EventSource !== "undefined") {
     const evSource = new EventSource(endpoint);
     evSource.onmessage = function (event) {
@@ -58,8 +59,8 @@
     };
   }
 
-  // 3. Logika Incremental View Count (SessionStorage)
-  const sessionViewKey = "apmody_viewed_" + postId;
+  // 3. Logika Incremental View Count (sessionStorage)
+  const sessionViewKey = "aDv_viewed_" + postId;
   if (!sessionStorage.getItem(sessionViewKey)) {
     sessionStorage.setItem(sessionViewKey, "true");
     fetch(`${baseUrl}/posts/${postId}/views.json`)
@@ -78,7 +79,7 @@
   }
 
   // 4. Logika Trigger Clap & Limit LocalStorage
-  const userClapKey = "apmody_claps_" + postId;
+  const userClapKey = "aDc_claps_" + postId;
   let userClapsGiven = parseInt(localStorage.getItem(userClapKey)) || 0;
 
   window.triggerClap = function () {
@@ -100,16 +101,18 @@
       });
 
       showParticle();
-      showToast(`Clap <span>+${userClapsGiven}</span>`, 1500);
+      const clapMsg = toastClapTpl.replace('{count}', userClapsGiven);
+      showToast(clapMsg, 1500);
     } else {
-      showToast(`Mencapai batas <span>${maxClaps} claps</span>!`, 2000);
+      const maxMsg = toastMaxTpl.replace('{max}', maxClaps);
+      showToast(maxMsg, 2000);
     }
   };
 
   function showParticle() {
     if (!clapBtn) return;
     const particle = document.createElement("div");
-    particle.className = "clap-particle";
+    particle.className = "aDc-particle";
     particle.innerText = "+1";
     clapBtn.appendChild(particle);
     setTimeout(() => particle.remove(), 800);
