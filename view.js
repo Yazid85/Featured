@@ -86,7 +86,7 @@
       window.triggerClap = function() {
         // Mengambil langsung dari konfigurasi Blogger secara real-time
         const liveConf = window.wcViewCountFbase || {};
-        const maxLimit = Number(liveConf.maxLimit) || 50;
+        const maxLimit = Number(liveConf.maxLimit) || 100;
         
         let tplClap = liveConf.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = liveConf.toastMaxText || 'Max limit: <span>{max}</span>';
