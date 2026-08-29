@@ -1,127 +1,97 @@
 (function () {
-  const config = window.aDcnfg || {};
-  const maxClaps = config.maxClaps || 50;
-  const toastClapTpl = config.toastClapText || 'Clap <span>+{count}</span>';
-  const toastMaxTpl = config.toastMaxText || 'You have reached the maximum limit of <span>{max} claps</span>!';
+  const conf = window.wcViewCountFbase || {};
+  const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
+  const useAbbr = conf.abbreviation || '0';
+  const typeWidget = conf.type || '1';
+
+  // Opsi Teks Notifikasi dari Config (dengan fallback default)
+  const tplClap = conf.toastClapText || 'Clap <span>+{count}</span>';
+  const tplMax = conf.toastMaxText || 'Max limit reached: <span>{max} claps</span>';
 
   function formatNum(num) {
     num = Number(num) || 0;
-    if (config.abbreviation === "0") return num.toLocaleString();
-    if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-    if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+    if (useAbbr === '0') return num.toLocaleString();
+    if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
     return num.toString();
   }
 
-  function initWidget() {
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7PahP7tTQGor7HRJv64UZLSk0V9L-PR0",
-      authDomain: "like-viewcnt.firebaseapp.com",
-      databaseURL: config.firebaseUrl || "https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "like-viewcnt"
+  function loadFB(cb) {
+    if (window.firebase && window.firebase.database) { cb(); return; }
+    let s1 = document.createElement('script');
+    s1.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js';
+    s1.onload = function() {
+      let s2 = document.createElement('script');
+      s2.src = 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js';
+      s2.onload = cb;
+      document.head.appendChild(s2);
     };
+    document.head.appendChild(s1);
+  }
 
-    if (window.firebase && !firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+  loadFB(function() {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: fbase });
     }
-
     const db = firebase.database();
-    
-    // Clean PATH: Hapus karakter ilegal untuk Firebase ID (. # $ [ ] /)
-    let cleanPath = window.location.pathname.replace(/^\/|\/$/g, '');
-    let postId = cleanPath ? cleanPath.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
+    let path = window.location.pathname.replace(/^\/|\/$/g, '');
+    let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
 
-    const clapRef = db.ref("posts/" + postId + "/claps");
-    const viewRef = db.ref("posts/" + postId + "/views");
+    const viewRef = db.ref("posts/" + id + "/views");
+    const clapRef = db.ref("posts/" + id + "/claps");
 
-    const clapTotalEl = document.getElementById("clapTotalCount");
-    const viewTotalEl = document.getElementById("viewTotalCount");
-    const toastEl = document.getElementById("apmodyToast");
-    const toastTextContent = document.getElementById("toastTextContent");
-    const clapBtnElement = document.getElementById("apmodyClapBtn");
+    const vEl = document.getElementById("viewTotalCount") || document.getElementById("aDvTotal");
+    const cEl = document.getElementById("clapTotalCount") || document.getElementById("aDcTotal");
+    const btn = document.getElementById("apmodyClapBtn") || document.getElementById("aDcBtn");
+    const toastEl = document.getElementById("apmodyToast") || document.getElementById("aDt");
 
-    let userClapKey = "apmody_claps_" + postId;
-    let userClapsGiven = parseInt(localStorage.getItem(userClapKey)) || 0;
-    let toastTimeout = null;
-    let currentGlobalClaps = 0;
-
-    // Scroll Logic
-    function checkScroll() {
-      if (!clapBtnElement) return;
-      const scrollPos = window.pageYOffset || document.documentElement.scrollTop || 0;
-      const isShortPage = document.documentElement.scrollHeight <= window.innerHeight + 50;
-
-      if (scrollPos > 30 || isShortPage) {
-        clapBtnElement.classList.add("visible");
-      } else {
-        clapBtnElement.classList.remove("visible");
-      }
+    // Hitung View
+    let vKey = "viewed_" + id;
+    if (!sessionStorage.getItem(vKey)) {
+      sessionStorage.setItem(vKey, "true");
+      viewRef.transaction(v => (v || 0) + 1);
     }
-    window.addEventListener("scroll", checkScroll, { passive: true });
-    window.addEventListener("resize", checkScroll, { passive: true });
-    checkScroll();
+    viewRef.on("value", snap => { if(vEl) vEl.innerText = formatNum(snap.val() || 0); });
 
-    // Logika View
-    let sessionViewKey = "apmody_viewed_" + postId;
-    if (!sessionStorage.getItem(sessionViewKey)) {
-      sessionStorage.setItem(sessionViewKey, "true");
-      viewRef.transaction(currentViews => (currentViews || 0) + 1);
-    }
+    // Hitung Clap
+    let cKey = "claps_" + id;
+    let given = parseInt(localStorage.getItem(cKey)) || 0;
+    let globalC = 0;
 
-    // Listener Realtime
-    viewRef.on("value", snapshot => {
-      let totalViews = snapshot.val() || 0;
-      if (viewTotalEl) viewTotalEl.innerText = formatNum(totalViews);
+    clapRef.on("value", snap => {
+      globalC = snap.val() || 0;
+      if(cEl) cEl.innerText = formatNum(globalC);
     });
 
-    clapRef.on("value", snapshot => {
-      currentGlobalClaps = snapshot.val() || 0;
-      if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
-    });
-
-    // Ekspos Fungsi ke Global (Window)
-    window.triggerClap = function () {
-      if (userClapsGiven >= currentGlobalClaps) {
-        userClapsGiven = currentGlobalClaps;
-      }
-
-      if (userClapsGiven < maxClaps) {
-        userClapsGiven++;
-        localStorage.setItem(userClapKey, userClapsGiven);
-
-        currentGlobalClaps++;
-        if (clapTotalEl) clapTotalEl.innerText = formatNum(currentGlobalClaps);
-
-        clapRef.transaction(currentClaps => (currentClaps || 0) + 1);
-
-        showParticleEffect();
-        showToast(toastClapTpl.replace('{count}', userClapsGiven), 1500);
+    // Fungsi Global Tombol Clap
+    window.triggerClap = function() {
+      const maxLimit = 50;
+      if (given < maxLimit) {
+        given++;
+        localStorage.setItem(cKey, given);
+        clapRef.transaction(c => (c || 0) + 1);
+        
+        if(toastEl) {
+          toastEl.innerHTML = tplClap.replace('{count}', given).replace('{max}', maxLimit);
+          toastEl.classList.add("show");
+          setTimeout(() => toastEl.classList.remove("show"), 1500);
+        }
       } else {
-        showToast(toastMaxTpl.replace('{max}', maxClaps), 2000);
+        if(toastEl) {
+          toastEl.innerHTML = tplMax.replace('{count}', given).replace('{max}', maxLimit);
+          toastEl.classList.add("show");
+          setTimeout(() => toastEl.classList.remove("show"), 2000);
+        }
       }
     };
 
-    function showParticleEffect() {
-      if (!clapBtnElement) return;
-      const particle = document.createElement("div");
-      particle.className = "clap-particle";
-      particle.innerText = "+1";
-      clapBtnElement.appendChild(particle);
-      setTimeout(() => particle.remove(), 800);
-    }
-
-    function showToast(htmlContent, duration) {
-      if (!toastEl || !toastTextContent) return;
-      toastTextContent.innerHTML = htmlContent;
-      toastEl.classList.add("show");
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => toastEl.classList.remove("show"), duration);
-    }
-  }
-
-  // Panggil init saat DOM & Firebase siap
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initWidget);
-  } else {
-    initWidget();
-  }
+    // Scroll effect tombol
+    window.addEventListener("scroll", () => {
+      if(window.scrollY > 30) {
+        if(btn) btn.classList.add("visible");
+      } else {
+        if(btn) btn.classList.remove("visible");
+      }
+    });
+  });
 })();
