@@ -1,5 +1,5 @@
 (function () {
-  const conf = window.ViewClap || {};
+  const conf = window.wcViewCountFbase || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
   const useAbbr = Number(conf.abbreviation || 0);
   const viewType = conf.type !== undefined ? conf.type : 1;
@@ -46,11 +46,11 @@
       const viewRef = db.ref("posts/" + id + "/views");
       const clapRef = db.ref("posts/" + id + "/claps");
 
-      const vEl = document.getElementById("vwT");
-      const cEl = document.getElementById("cpT");
-      const btn = document.getElementById("cpB");
-      const toastEl = document.getElementById("ClapNt");
-      const tContent = document.getElementById("tTc");
+      const vEl = document.getElementById("viewTotalCount");
+      const cEl = document.getElementById("clapTotalCount");
+      const btn = document.getElementById("apmodyClapBtn");
+      const toastEl = document.getElementById("apmodyToast");
+      const tContent = document.getElementById("toastTextContent");
 
       if (viewType == 0) {
         let vKey = "viewed_perm_" + id;
@@ -84,8 +84,8 @@
       });
 
       window.triggerClap = function() {
-        const confNow = window.ViewClap || {};
-        const maxLimit = Number(confNow.maxLimit) || 50;
+        const maxLimit = 50; // <--- Batas maksimal clap diatur di sini (GitHub)
+        const confNow = window.wcViewCountFbase || {};
         let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
