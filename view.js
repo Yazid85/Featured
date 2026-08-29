@@ -85,9 +85,15 @@
 
       window.triggerClap = function() {
         const confNow = window.wcViewCountFbase || {};
-        const maxLimit = Number(confNow.maxLimit) || 100;
+        const maxLimit = Number(confNow.maxLimit) || 50;
         let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
+
+        // Validasi ulang jika localStorage menyimpan angka melebihi maxLimit baru
+        if (given >= maxLimit) {
+          localStorage.setItem(cKey, maxLimit);
+          given = maxLimit;
+        }
 
         if (given < maxLimit) {
           given++;
