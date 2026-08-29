@@ -85,7 +85,7 @@
 
       window.triggerClap = function() {
         const confNow = window.wcViewCountFbase || {};
-        const maxLimit = Number(confNow.maxLimit) || 50;
+        const maxLimit = Number(confNow.maxLimit) || 100;
         let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
