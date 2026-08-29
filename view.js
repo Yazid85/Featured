@@ -84,11 +84,10 @@
       });
 
       window.triggerClap = function() {
-        const currentConf = window.wcViewCountFbase || {};
-        const maxLimit = Number(currentConf.maxLimit) || 50;
-        
-        let tplClap = currentConf.toastClapText || 'Clap <span>+{count}</span>';
-        let tplMax = currentConf.toastMaxText || 'Max limit: <span>{max}</span>';
+        const confNow = window.wcViewCountFbase || {};
+        const maxLimit = Number(confNow.maxLimit) || 50;
+        let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
+        let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
         if (given < maxLimit) {
           given++;
