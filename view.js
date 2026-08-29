@@ -84,7 +84,6 @@
       });
 
       window.triggerClap = function() {
-        // Mengambil langsung dari konfigurasi Blogger secara real-time
         const liveConf = window.wcViewCountFbase || {};
         const maxLimit = Number(liveConf.maxLimit) || 100;
         
@@ -105,7 +104,8 @@
           if(toastEl && tContent) {
             tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
             toastEl.classList.add("show");
-            setTimeout(() => toastEl.classList.2000("show"), 2000); // Perbaikan sintaks timeout toast
+            // Perbaikan sintaks error di sini:
+            setTimeout(() => toastEl.classList.remove("show"), 2000);
           }
         }
       };
