@@ -34,84 +34,82 @@
   }
 
   loadFB(function() {
-    if (!firebase.apps.length) {
-      firebase.initializeApp({ databaseURL: fbase });
-    }
-    const db = firebase.database();
-    let path = window.location.pathname.replace(/^\/|\/$/g, '');
-    let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
-
-    const viewRef = db.ref("posts/" + id + "/views");
-    const clapRef = db.ref("posts/" + id + "/claps");
-
-    const vEl = document.getElementById("vwT");
-    const cEl = document.getElementById("cpT");
-    const btn = document.getElementById("cpB");
-    const toastEl = document.getElementById("ClapNt");
-    const tContent = document.getElementById("tTc");
-
-    if (viewType == 0) {
-      let vKey = "viewed_perm_" + id;
-      if (!localStorage.getItem(vKey)) {
-        localStorage.setItem(vKey, "true");
-        viewRef.transaction(v => (v || 0) + 1);
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp({ databaseURL: fbase });
       }
-    } else {
-      let vKey = "viewed_" + id;
-      if (!sessionStorage.getItem(vKey)) {
-        sessionStorage.setItem(vKey, "true");
-        viewRef.transaction(v => (v || 0) + 1);
-      }
-    }
-    
-    viewRef.on("value", snap => { 
-      if(vEl) {
-        vEl.innerText = formatNum(snap.val() || 0); 
-      }
-    });
+      const db = firebase.database();
+      let path = window.location.pathname.replace(/^\/|\/$/g, '');
+      let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
 
-    let cKey = "claps_" + id;
-    let given = parseInt(localStorage.getItem(cKey)) || 0;
-    let globalC = 0;
+      const viewRef = db.ref("posts/" + id + "/views");
+      const clapRef = db.ref("posts/" + id + "/claps");
 
-    clapRef.on("value", snap => {
-      globalC = snap.val() || 0;
-      if(cEl) {
-        cEl.innerText = formatNum(globalC); 
-      }
-    });
+      const vEl = document.getElementById("vwT");
+      const cEl = document.getElementById("cpT");
+      const btn = document.getElementById("cpB");
+      const toastEl = document.getElementById("ClapNt");
+      const tContent = document.getElementById("tTc");
 
-    window.triggerClap = function() {
-      const maxLimit = 50;
-      const confNow = window.ViewClap || {};
-      let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
-      let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
-
-      if (given < maxLimit) {
-        given++;
-        localStorage.setItem(cKey, given);
-        clapRef.transaction(c => (c || 0) + 1);
-        
-        if(toastEl && tContent) {
-          tContent.innerHTML = tplClap.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
-          toastEl.classList.add("show");
-          setTimeout(() => toastEl.classList.remove("show"), 1500);
+      if (viewType == 0) {
+        let vKey = "viewed_perm_" + id;
+        if (!localStorage.getItem(vKey)) {
+          localStorage.setItem(vKey, "true");
+          viewRef.transaction(v => (v || 0) + 1);
         }
       } else {
-        if(toastEl && tContent) {
-          tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
-          toastEl.classList.add("show");
-          setTimeout(() => toastEl.classList.remove("show"), 2000);
+        let vKey = "viewed_" + id;
+        if (!sessionStorage.getItem(vKey)) {
+          sessionStorage.setItem(vKey, "true");
+          viewRef.transaction(v => (v || 0) + 1);
         }
       }
-    };
+      
+      viewRef.on("value", snap => { 
+        if(vEl) {
+          vEl.innerText = formatNum(snap.val() || 0); 
+        }
+      });
 
-    window.addEventListener("scroll", () => {
-      if(window.scrollY > 30) {
-        if(btn) btn.classList.add("visible");
-      } else {
-        if(btn) btn.classList.remove("visible");
-      }
-    });
+      let cKey = "claps_" + id;
+      let given = parseInt(localStorage.getItem(cKey)) || 0;
+      let globalC = 0;
+
+      clapRef.on("value", snap => {
+        globalC = snap.val() || 0;
+        if(cEl) {
+          cEl.innerText = formatNum(globalC); 
+        }
+      });
+
+      window.triggerClap = function() {
+        const confNow = window.ViewClap || {};
+        const maxLimit = Number(confNow.maxLimit) || 50;
+        let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
+        let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
+
+        if (given < maxLimit) {
+          given++;
+          localStorage.setItem(cKey, given);
+          clapRef.transaction(c => (c || 0) + 1);
+          
+          if(toastEl && tContent) {
+            tContent.innerHTML = tplClap.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
+            toastEl.classList.add("show");
+            setTimeout(() => toastEl.classList.remove("show"), 1500);
+          }
+        } else {
+          if(toastEl && tContent) {
+            tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
+            toastEl.classList.add("show");
+            setTimeout(() => toastEl.classList.remove("show"), 2000);
+          }
+        }
+      };
+
+      if(btn) btn.classList.add("visible");
+    } catch(e) {
+      console.error("Firebase Initialization Error:", e);
+    }
   });
 })();
