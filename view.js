@@ -1,31 +1,32 @@
 (function () {
   const conf = window.wcViewCountFbase || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
-  const useAbbr = String(conf.abbreviation || '0');
   
-  const tplClap = conf.toastClapText || 'Clap <span>+{count}</span>';
-  const tplMax = conf.toastMaxText || 'Max limit reached: <span>{max} claps</span>';
+  // Pastikan membaca string/angka dengan benar
+  const useAbbr = Number(conf.abbreviation !== undefined ? conf.abbreviation : 0);
+  
+  const tplClap = conf.toastClapText || 'Terima kasih! Clap <span>+{count}</span>';
+  const tplMax = conf.toastMaxText || 'Maksimal batas clap adalah <span>{max}</span> kali!';
 
-  // SVG Ikon Clap & View
   const svgClap = '<svg viewBox="0 0 24 24"><path d="M20.9 9.5c-.3-.4-.8-.6-1.3-.6h-4.3l.7-3.4c.1-.4 0-.8-.3-1.1-.3-.3-.8-.5-1.3-.5-.3 0-.6.1-.9.3L8 9H3v10h12.5c1 0 1.9-.6 2.3-1.5l3.2-6.5c.2-.5.2-1-.1-1.5zM5 17v-6h2v6H5zm14-6.8L15.8 17H9V9.5l3.5-3.5.7 3.6h5.7c.1 0 .2.1.2.2 0 0 0 .1-.1.2z"/></svg>';
 
   function formatNum(num) {
     num = Number(num) || 0;
     
-    // 0 = Format Angka Penuh dengan pemisah (1,000 atau 1.000)
-    if (useAbbr === '0') {
+    // 0 = Format Angka Penuh (Contoh: 1,000)
+    if (useAbbr === 0) {
       return num.toLocaleString();
     }
     
-    // 1 = Format 'k' (1k, 1.5k)
-    if (useAbbr === '1') {
+    // 1 = Format Huruf Kecil (Contoh: 1k, 1m)
+    if (useAbbr === 1) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'm';
       if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
       return num.toString();
     }
     
-    // 2 = Otomatis (1k dan 1m saat mencapai 1 juta)
-    if (useAbbr === '2') {
+    // 2 = Format Huruf Kapital Otomatis (Contoh: 1K, 1M)
+    if (useAbbr === 2) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
       if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
       return num.toString();
@@ -58,12 +59,11 @@
     const viewRef = db.ref("posts/" + id + "/views");
     const clapRef = db.ref("posts/" + id + "/claps");
 
-    const vEl = document.getElementById("viewTotalCount") || document.getElementById("aDvTotal");
-    const cEl = document.getElementById("clapTotalCount") || document.getElementById("aDcTotal");
-    const btn = document.getElementById("apmodyClapBtn") || document.getElementById("aDcBtn");
-    const toastEl = document.getElementById("apmodyToast") || document.getElementById("aDt");
+    const vEl = document.getElementById("viewTotalCount");
+    const cEl = document.getElementById("clapTotalCount");
+    const btn = document.getElementById("apmodyClapBtn");
+    const toastEl = document.getElementById("apmodyToast");
 
-    // Hitung View
     let vKey = "viewed_" + id;
     if (!sessionStorage.getItem(vKey)) {
       sessionStorage.setItem(vKey, "true");
@@ -71,7 +71,6 @@
     }
     viewRef.on("value", snap => { if(vEl) vEl.innerText = formatNum(snap.val() || 0); });
 
-    // Hitung Clap
     let cKey = "claps_" + id;
     let given = parseInt(localStorage.getItem(cKey)) || 0;
     let globalC = 0;
@@ -81,7 +80,6 @@
       if(cEl) cEl.innerText = formatNum(globalC);
     });
 
-    // Fungsi Global Tombol Clap
     window.triggerClap = function() {
       const maxLimit = 50;
       if (given < maxLimit) {
@@ -103,7 +101,6 @@
       }
     };
 
-    // Scroll effect tombol
     window.addEventListener("scroll", () => {
       if(window.scrollY > 30) {
         if(btn) btn.classList.add("visible");
