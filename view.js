@@ -1,5 +1,5 @@
 (function () {
-  const conf = window.wcViewCountFbase || {};
+  const conf = window.ViewClap || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
   const useAbbr = Number(conf.abbreviation || 0);
   
@@ -48,11 +48,11 @@
     const viewRef = db.ref("posts/" + id + "/views");
     const clapRef = db.ref("posts/" + id + "/claps");
 
-    const vEl = document.getElementById("viewTotalCount");
-    const cEl = document.getElementById("clapTotalCount");
-    const btn = document.getElementById("apmodyClapBtn");
-    const toastEl = document.getElementById("apmodyToast");
-    const tContent = document.getElementById("toastTextContent");
+    const vEl = document.getElementById("vwT");
+    const cEl = document.getElementById("cpT");
+    const btn = document.getElementById("cpB");
+    const toastEl = document.getElementById("ClapNt");
+    const tContent = document.getElementById("tTc");
 
     if (vEl && vEl.innerText === "") {
       vEl.classList.add("apmody-loading-dots");
@@ -99,7 +99,7 @@
 
     window.triggerClap = function() {
       const maxLimit = 50;
-      const confNow = window.wcViewCountFbase || {};
+      const confNow = window.ViewClap || {};
       let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
       let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
