@@ -80,15 +80,10 @@
 
       window.triggerClap = function() {
         const liveConf = window.wcViewCountFbase || {};
-        const maxLimit = Number(liveConf.maxLimit) || 100;
+        const maxLimit = Number(liveConf.maxLimit) || 50;
         
         let tplClap = liveConf.toastClapText || 'Terima kasih! Clap <span>+{count}</span>';
         let tplMax = liveConf.toastMaxText || 'Maksimal batas clap adalah <span>{max}</span> kali!';
-
-        if (given >= maxLimit) {
-          localStorage.setItem(cKey, maxLimit);
-          given = maxLimit;
-        }
 
         if (given < maxLimit) {
           given++;
