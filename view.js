@@ -17,6 +17,13 @@
     
     // Huruf Kecil
     if (useAbbr === 1) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'm';
+      if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'k';
+      return num.toString();
+    }
+    
+    // Huruf Besar
+    if (useAbbr === 2) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'M';
       if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'K';
       return num.toString();
