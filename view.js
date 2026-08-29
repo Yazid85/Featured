@@ -52,7 +52,7 @@
       const toastEl = document.getElementById("apmodyToast");
       const tContent = document.getElementById("toastTextContent");
 
-      if (viewType == 0) {
+      if (viewType == "0" || viewType === 0) {
         let vKey = "viewed_perm_" + id;
         if (!localStorage.getItem(vKey)) {
           localStorage.setItem(vKey, "true");
@@ -74,22 +74,26 @@
 
       let cKey = "claps_" + id;
       let given = parseInt(localStorage.getItem(cKey)) || 0;
-      let globalC = 0;
 
       clapRef.on("value", snap => {
-        globalC = snap.val() || 0;
+        let globalC = snap.val() || 0;
         if(cEl) {
           cEl.innerText = formatNum(globalC); 
         }
       });
 
-window.triggerClap = function() {
+      window.triggerClap = function() {
         const liveConf = window.wcViewCountFbase || {};
-        // Paksa nilai maxLimit langsung membaca dari Blogger, jika kosong paksa mutlak ke 100
-        const maxLimit = Number(liveConf.maxLimit) ? Number(liveConf.maxLimit) : 100;
+        // Membaca langsung maxLimit dari objek Blogger, jika tidak ada fallback ke 100
+        const maxLimit = Number(liveConf.maxLimit) || 100;
         
-        let tplClap = liveConf.toastClapText || 'Clap <span>+{count}</span>';
-        let tplMax = liveConf.toastMaxText || 'Max limit: <span>{max}</span>';
+        let tplClap = liveConf.toastClapText || 'Terima kasih! Clap <span>+{count}</span>';
+        let tplMax = liveConf.toastMaxText || 'Maksimal batas clap adalah <span>{max}</span> kali!';
+
+        if (given >= maxLimit) {
+          localStorage.setItem(cKey, maxLimit);
+          given = maxLimit;
+        }
 
         if (given < maxLimit) {
           given++;
