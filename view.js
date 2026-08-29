@@ -1,28 +1,20 @@
 (function () {
-  // Paksa membaca objek global var wcViewCountFbase dari HTML
   const conf = window.wcViewCountFbase || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
-  
-  // Format singkatan
   const useAbbr = Number(conf.abbreviation || 0);
 
   const svgClap = '<svg viewBox="0 0 24 24"><path d="M20.9 9.5c-.3-.4-.8-.6-1.3-.6h-4.3l.7-3.4c.1-.4 0-.8-.3-1.1-.3-.3-.8-.5-1.3-.5-.3 0-.6.1-.9.3L8 9H3v10h12.5c1 0 1.9-.6 2.3-1.5l3.2-6.5c.2-.5.2-1-.1-1.5zM5 17v-6h2v6H5zm14-6.8L15.8 17H9V9.5l3.5-3.5.7 3.6h5.7c.1 0 .2.1.2.2 0 0 0 .1-.1.2z"/></svg>';
 
-  // Logika Format Angka K/M yang benar
   function formatNum(num) {
     num = Number(num) || 0;
-    
-    // Default Penuh
     if (useAbbr === 0) return num.toLocaleString();
     
-    // Huruf Kecil
     if (useAbbr === 1) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'm';
       if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'k';
       return num.toString();
     }
     
-    // Huruf Besar
     if (useAbbr === 2) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'M';
       if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'K';
@@ -62,29 +54,43 @@
     const toastEl = document.getElementById("apmodyToast");
     const tContent = document.getElementById("toastTextContent");
 
+    // Berikan efek loading di awal sebelum data masuk
+    if(vEl) {
+      vEl.innerText = "";
+      vEl.classList.add("apmody-loading-dots");
+    }
+    if(cEl) {
+      cEl.innerText = "";
+      cEl.classList.add("apmody-loading-dots");
+    }
+
     let vKey = "viewed_" + id;
     if (!sessionStorage.getItem(vKey)) {
       sessionStorage.setItem(vKey, "true");
       viewRef.transaction(v => (v || 0) + 1);
     }
     
-    // Menjalankan formatNum() saat view didapatkan dari database
-    viewRef.on("value", snap => { if(vEl) vEl.innerText = formatNum(snap.val() || 0); });
+    viewRef.on("value", snap => { 
+      if(vEl) {
+        vEl.classList.remove("apmody-loading-dots");
+        vEl.innerText = formatNum(snap.val() || 0); 
+      }
+    });
 
     let cKey = "claps_" + id;
     let given = parseInt(localStorage.getItem(cKey)) || 0;
     let globalC = 0;
 
-    // Menjalankan formatNum() pada Total Claps
     clapRef.on("value", snap => {
       globalC = snap.val() || 0;
-      if(cEl) cEl.innerText = formatNum(globalC);
+      if(cEl) {
+        cEl.classList.remove("apmody-loading-dots");
+        cEl.innerText = formatNum(globalC); 
+      }
     });
 
     window.triggerClap = function() {
       const maxLimit = 50;
-      
-      // Mengambil ulang objek global ketika tombol diklik
       const confNow = window.wcViewCountFbase || {};
       
       let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
