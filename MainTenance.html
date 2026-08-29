@@ -1,0 +1,142 @@
+<!-- Custom Maintenance Mode Layer -->
+<div id='advsl-maintenance-layer' style='display:none;'>
+  <style>
+    body.is-maintenance {
+      overflow: hidden !important;
+      height: 100vh !important;
+    }
+    #advsl-maintenance-layer {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: #ffffff;
+      color: #222222;
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif;
+    }
+    #advsl-maintenance-layer .m-box {
+      max-width: 480px;
+      width: 100%;
+      padding: 30px;
+      border-radius: 16px;
+      background: #f8f9fa;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    #advsl-maintenance-layer h1 {
+      font-size: 22px;
+      margin-bottom: 8px;
+      color: #1a73e8;
+    }
+    #advsl-maintenance-layer p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #5f6368;
+      margin-bottom: 20px;
+    }
+    .m-timer {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .m-timer .t-card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      min-width: 55px;
+    }
+    .m-timer .t-num {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a73e8;
+      display: block;
+    }
+    .m-timer .t-label {
+      font-size: 11px;
+      color: #70757a;
+      text-transform: uppercase;
+    }
+  </style>
+
+  <div class='m-box'>
+    <h1>Under Maintenance</h1>
+    <p>Please come back again in...</p>
+    
+    <!-- Widget Countdown Timer -->
+    <div class='m-timer'>
+      <div class='t-card'><span class='t-num' id='cd-hours'>00</span><span class='t-label'>Hours</span></div>
+      <div class='t-card'><span class='t-num' id='cd-minutes'>00</span><span class='t-label'>Minutes</span></div>
+      <div class='t-card'><span class='t-num' id='cd-seconds'>00</span><span class='t-label'>Seconds</span></div>
+    </div>
+  </div>
+</div>
+
+<script type='text/javascript'>
+//<![CDATA[
+
+  // 1. FORMAT TANGGAL SELESAI MAINTENANCE
+  // Cukup ubah tanggal di bawah ini. Mode maintenance otomatis AKTIF sampai waktu ini tiba.
+  const mtEndOn = 'Aug 30 2026 04:26:59 GMT+07:00';
+
+  // 2. LOGIKA PENGECEKAN STATUS & ADMIN BYPASS
+  // Akses sekali pakai URL ?admin=1 di browser HP/PC Anda agar Anda bisa bypass
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('admin') === '1') {
+    localStorage.setItem('advsl_admin_session', 'true');
+  }
+  var isLocalAdmin = localStorage.getItem('advsl_admin_session') === 'true';
+
+  var endTime = new Date(mtEndOn).getTime();
+  var now = new Date().getTime();
+
+  // Maintenance aktif HANYA JIKA waktu sekarang belum mencapai mtEndOn
+  var isMaintenanceActive = (endTime - now) > 0;
+
+  document.addEventListener("DOMContentLoaded", function() {
+    var layer = document.getElementById('advsl-maintenance-layer');
+
+    // Tampilkan maintenance jika masih dalam masa waktu perbaikan DAN bukan Admin
+    if (isMaintenanceActive && !isLocalAdmin) {
+      document.body.classList.add('is-maintenance');
+      if (layer) { layer.style.display = 'flex'; }
+      startCountdown(endTime);
+    } else {
+      document.body.classList.remove('is-maintenance');
+      if (layer) { layer.style.display = 'none'; }
+    }
+  });
+
+  // 3. LOGIKA COUNTDOWN TIMER
+  function startCountdown(targetTime) {
+    var timerInterval = setInterval(function() {
+      var currentTime = new Date().getTime();
+      var distance = targetTime - currentTime;
+
+      if (distance < 0) {
+        clearInterval(timerInterval);
+        // Buka tampilan blog secara otomatis jika countdown selesai
+        document.body.classList.remove('is-maintenance');
+        var layer = document.getElementById('advsl-maintenance-layer');
+        if (layer) { layer.style.display = 'none'; }
+        return;
+      }
+
+      var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      document.getElementById('cd-hours').innerText = hours < 10 ? '0' + hours : hours;
+      document.getElementById('cd-minutes').innerText = minutes < 10 ? '0' + minutes : minutes;
+      document.getElementById('cd-seconds').innerText = seconds < 10 ? '0' + seconds : seconds;
+    }, 1000);
+  }
+
+//]]>
+</script>
