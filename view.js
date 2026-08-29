@@ -84,8 +84,8 @@
       });
 
       window.triggerClap = function() {
-        const maxLimit = 50; // <--- Batas maksimal clap diatur di sini (GitHub)
         const confNow = window.wcViewCountFbase || {};
+        const maxLimit = Number(confNow.maxLimit) || 50;
         let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
