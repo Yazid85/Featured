@@ -1,10 +1,14 @@
 (function() {
   window.TikGram = window.TikGram || {};
+  
+  // Jika tiktok bukan 1, sembunyikan seluruh elemen .box-mode dan hentikan skrip
   if (window.TikGram.tiktok !== 1) {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.box-mode').forEach(box => box.style.display = 'none');
+    });
     return;
   }
 
-  // Mengambil konfigurasi dari objek TikGram, fallback ke default jika tidak diset
   const config = window.TikGram;
   const webAppUrl = config.webAppUrl || 'https://script.google.com/macros/s/AKfycbxlDUABkRZYv2Fi2ugMBlxAnSIj9cBEl92lNsg1dpYnZNBTmlfXntcQCzwDLXIiRLbn/exec';
 
