@@ -2,25 +2,21 @@
   const conf = window.wcViewCountFbase || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
   const useAbbr = Number(conf.abbreviation || 0);
-
-  const svgClap = '<svg viewBox="0 0 24 24"><path d="M20.9 9.5c-.3-.4-.8-.6-1.3-.6h-4.3l.7-3.4c.1-.4 0-.8-.3-1.1-.3-.3-.8-.5-1.3-.5-.3 0-.6.1-.9.3L8 9H3v10h12.5c1 0 1.9-.6 2.3-1.5l3.2-6.5c.2-.5.2-1-.1-1.5zM5 17v-6h2v6H5zm14-6.8L15.8 17H9V9.5l3.5-3.5.7 3.6h5.7c.1 0 .2.1.2.2 0 0 0 .1-.1.2z"/></svg>';
+  const viewType = Number(conf.type !== undefined ? conf.type : 1);
 
   function formatNum(num) {
     num = Number(num) || 0;
     if (useAbbr === 0) return num.toLocaleString();
-    
     if (useAbbr === 1) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'm';
       if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'k';
       return num.toString();
     }
-    
     if (useAbbr === 2) {
       if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.', ',') + 'M';
       if (num >= 1000) return (num / 1000).toFixed(1).replace('.', ',') + 'K';
       return num.toString();
     }
-    
     return num.toLocaleString();
   }
 
@@ -42,8 +38,6 @@
       firebase.initializeApp({ databaseURL: fbase });
     }
     const db = firebase.database();
-    
-    // Otomatis membuat ID unik berdasarkan URL path setiap postingan
     let path = window.location.pathname.replace(/^\/|\/$/g, '');
     let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
 
@@ -56,10 +50,18 @@
     const toastEl = document.getElementById("apmodyToast");
     const tContent = document.getElementById("toastTextContent");
 
-    let vKey = "viewed_" + id;
-    if (!sessionStorage.getItem(vKey)) {
-      sessionStorage.setItem(vKey, "true");
-      viewRef.transaction(v => (v || 0) + 1);
+    if (viewType === 1) {
+      let vKey = "viewed_" + id;
+      if (!sessionStorage.getItem(vKey)) {
+        sessionStorage.setItem(vKey, "true");
+        viewRef.transaction(v => (v || 0) + 1);
+      }
+    } else if (viewType === 0) {
+      let vKey = "viewed_perm_" + id;
+      if (!localStorage.getItem(vKey)) {
+        localStorage.setItem(vKey, "true");
+        viewRef.transaction(v => (v || 0) + 1);
+      }
     }
     
     viewRef.on("value", snap => { if(vEl) vEl.innerText = formatNum(snap.val() || 0); });
@@ -76,7 +78,6 @@
     window.triggerClap = function() {
       const maxLimit = 50;
       const confNow = window.wcViewCountFbase || {};
-      
       let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
       let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
 
