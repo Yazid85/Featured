@@ -83,9 +83,10 @@
         }
       });
 
-      window.triggerClap = function() {
+window.triggerClap = function() {
         const liveConf = window.wcViewCountFbase || {};
-        const maxLimit = Number(liveConf.maxLimit) || 100;
+        // Paksa nilai maxLimit langsung membaca dari Blogger, jika kosong paksa mutlak ke 100
+        const maxLimit = Number(liveConf.maxLimit) ? Number(liveConf.maxLimit) : 100;
         
         let tplClap = liveConf.toastClapText || 'Clap <span>+{count}</span>';
         let tplMax = liveConf.toastMaxText || 'Max limit: <span>{max}</span>';
@@ -104,7 +105,6 @@
           if(toastEl && tContent) {
             tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
             toastEl.classList.add("show");
-            // Perbaikan sintaks error di sini:
             setTimeout(() => toastEl.classList.remove("show"), 2000);
           }
         }
