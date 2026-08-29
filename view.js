@@ -84,16 +84,12 @@
       });
 
       window.triggerClap = function() {
-        const confNow = window.wcViewCountFbase || {};
-        const maxLimit = Number(confNow.maxLimit) || 50;
-        let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
-        let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
-
-        // Validasi ulang jika localStorage menyimpan angka melebihi maxLimit baru
-        if (given >= maxLimit) {
-          localStorage.setItem(cKey, maxLimit);
-          given = maxLimit;
-        }
+        // Mengambil langsung dari konfigurasi Blogger secara real-time
+        const liveConf = window.wcViewCountFbase || {};
+        const maxLimit = Number(liveConf.maxLimit) || 50;
+        
+        let tplClap = liveConf.toastClapText || 'Clap <span>+{count}</span>';
+        let tplMax = liveConf.toastMaxText || 'Max limit: <span>{max}</span>';
 
         if (given < maxLimit) {
           given++;
@@ -109,7 +105,7 @@
           if(toastEl && tContent) {
             tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
             toastEl.classList.add("show");
-            setTimeout(() => toastEl.classList.remove("show"), 2000);
+            setTimeout(() => toastEl.classList.2000("show"), 2000); // Perbaikan sintaks timeout toast
           }
         }
       };
