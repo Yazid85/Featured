@@ -3,8 +3,6 @@
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
   const useAbbr = Number(conf.abbreviation || 0);
 
-  const svgClap = '<svg viewBox="0 0 24 24"><path d="M20.9 9.5c-.3-.4-.8-.6-1.3-.6h-4.3l.7-3.4c.1-.4 0-.8-.3-1.1-.3-.3-.8-.5-1.3-.5-.3 0-.6.1-.9.3L8 9H3v10h12.5c1 0 1.9-.6 2.3-1.5l3.2-6.5c.2-.5.2-1-.1-1.5zM5 17v-6h2v6H5zm14-6.8L15.8 17H9V9.5l3.5-3.5.7 3.6h5.7c.1 0 .2.1.2.2 0 0 0 .1-.1.2z"/></svg>';
-
   function formatNum(num) {
     num = Number(num) || 0;
     if (useAbbr === 0) return num.toLocaleString();
@@ -54,7 +52,6 @@
     const toastEl = document.getElementById("apmodyToast");
     const tContent = document.getElementById("toastTextContent");
 
-    // Berikan efek loading di awal sebelum data masuk
     if(vEl) {
       vEl.innerText = "";
       vEl.classList.add("apmody-loading-dots");
