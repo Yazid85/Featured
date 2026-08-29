@@ -1,8 +1,12 @@
 (function () {
-  const conf = window.ViewClap || {};
+  const conf = window.wcViewCountFbase || {};
   const fbase = conf.firebaseUrl || 'https://like-viewcnt-default-rtdb.asia-southeast1.firebasedatabase.app/';
   const useAbbr = Number(conf.abbreviation || 0);
+  
+  // Menggunakan perbandingan longgar (==) agar '0' (string) dan 0 (number) terbaca sama
   const viewType = conf.type !== undefined ? conf.type : 1;
+
+  const svgClap = '<svg viewBox="0 0 24 24"><path d="M20.9 9.5c-.3-.4-.8-.6-1.3-.6h-4.3l.7-3.4c.1-.4 0-.8-.3-1.1-.3-.3-.8-.5-1.3-.5-.3 0-.6.1-.9.3L8 9H3v10h12.5c1 0 1.9-.6 2.3-1.5l3.2-6.5c.2-.5.2-1-.1-1.5zM5 17v-6h2v6H5zm14-6.8L15.8 17H9V9.5l3.5-3.5.7 3.6h5.7c.1 0 .2.1.2.2 0 0 0 .1-.1.2z"/></svg>';
 
   function formatNum(num) {
     num = Number(num) || 0;
@@ -34,82 +38,96 @@
   }
 
   loadFB(function() {
-    try {
-      if (!firebase.apps.length) {
-        firebase.initializeApp({ databaseURL: fbase });
+    if (!firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: fbase });
+    }
+    const db = firebase.database();
+    let path = window.location.pathname.replace(/^\/|\/$/g, '');
+    let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
+
+    const viewRef = db.ref("posts/" + id + "/views");
+    const clapRef = db.ref("posts/" + id + "/claps");
+
+    const vEl = document.getElementById("viewTotalCount");
+    const cEl = document.getElementById("clapTotalCount");
+    const btn = document.getElementById("apmodyClapBtn");
+    const toastEl = document.getElementById("apmodyToast");
+    const tContent = document.getElementById("toastTextContent");
+
+    if (vEl && vEl.innerText === "") {
+      vEl.classList.add("apmody-loading-dots");
+    }
+    if (cEl && cEl.innerText === "") {
+      cEl.classList.add("apmody-loading-dots");
+    }
+
+    // Logika Pemilihan Type Counter
+    if (viewType == 0) {
+      // Tipe 0: Permanen (Menggunakan localStorage, tidak bertambah saat halaman di-refresh)
+      let vKey = "viewed_perm_" + id;
+      if (!localStorage.getItem(vKey)) {
+        localStorage.setItem(vKey, "true");
+        viewRef.transaction(v => (v || 0) + 1);
       }
-      const db = firebase.database();
-      let path = window.location.pathname.replace(/^\/|\/$/g, '');
-      let id = path ? path.replace(/[^a-zA-Z0-9]/g, '_') : 'homepage';
+    } else {
+      // Tipe 1: Sesi (Menggunakan sessionStorage, bertambah jika membuka sesi tab baru / refresh tergantung sesi)
+      let vKey = "viewed_" + id;
+      if (!sessionStorage.getItem(vKey)) {
+        sessionStorage.setItem(vKey, "true");
+        viewRef.transaction(v => (v || 0) + 1);
+      }
+    }
+    
+    viewRef.on("value", snap => { 
+      if(vEl) {
+        vEl.classList.remove("apmody-loading-dots");
+        vEl.innerText = formatNum(snap.val() || 0); 
+      }
+    });
 
-      const viewRef = db.ref("posts/" + id + "/views");
-      const clapRef = db.ref("posts/" + id + "/claps");
+    let cKey = "claps_" + id;
+    let given = parseInt(localStorage.getItem(cKey)) || 0;
+    let globalC = 0;
 
-      const vEl = document.getElementById("vwT");
-      const cEl = document.getElementById("cpT");
-      const btn = document.getElementById("cpB");
-      const toastEl = document.getElementById("ClapNt");
-      const tContent = document.getElementById("tTc");
+    clapRef.on("value", snap => {
+      globalC = snap.val() || 0;
+      if(cEl) {
+        cEl.classList.remove("apmody-loading-dots");
+        cEl.innerText = formatNum(globalC); 
+      }
+    });
 
-      if (viewType == 0) {
-        let vKey = "viewed_perm_" + id;
-        if (!localStorage.getItem(vKey)) {
-          localStorage.setItem(vKey, "true");
-          viewRef.transaction(v => (v || 0) + 1);
+    window.triggerClap = function() {
+      const maxLimit = 50;
+      const confNow = window.wcViewCountFbase || {};
+      let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
+      let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
+
+      if (given < maxLimit) {
+        given++;
+        localStorage.setItem(cKey, given);
+        clapRef.transaction(c => (c || 0) + 1);
+        
+        if(toastEl && tContent) {
+          tContent.innerHTML = tplClap.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
+          toastEl.classList.add("show");
+          setTimeout(() => toastEl.classList.remove("show"), 1500);
         }
       } else {
-        let vKey = "viewed_" + id;
-        if (!sessionStorage.getItem(vKey)) {
-          sessionStorage.setItem(vKey, "true");
-          viewRef.transaction(v => (v || 0) + 1);
+        if(toastEl && tContent) {
+          tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
+          toastEl.classList.add("show");
+          setTimeout(() => toastEl.classList.remove("show"), 2000);
         }
       }
-      
-      viewRef.on("value", snap => { 
-        if(vEl) {
-          vEl.innerText = formatNum(snap.val() || 0); 
-        }
-      });
+    };
 
-      let cKey = "claps_" + id;
-      let given = parseInt(localStorage.getItem(cKey)) || 0;
-      let globalC = 0;
-
-      clapRef.on("value", snap => {
-        globalC = snap.val() || 0;
-        if(cEl) {
-          cEl.innerText = formatNum(globalC); 
-        }
-      });
-
-      window.triggerClap = function() {
-        const confNow = window.ViewClap || {};
-        const maxLimit = Number(confNow.maxLimit) || 50;
-        let tplClap = confNow.toastClapText || 'Clap <span>+{count}</span>';
-        let tplMax = confNow.toastMaxText || 'Max limit: <span>{max}</span>';
-
-        if (given < maxLimit) {
-          given++;
-          localStorage.setItem(cKey, given);
-          clapRef.transaction(c => (c || 0) + 1);
-          
-          if(toastEl && tContent) {
-            tContent.innerHTML = tplClap.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
-            toastEl.classList.add("show");
-            setTimeout(() => toastEl.classList.remove("show"), 1500);
-          }
-        } else {
-          if(toastEl && tContent) {
-            tContent.innerHTML = tplMax.replace(/\{count\}/g, given).replace(/\{max\}/g, maxLimit);
-            toastEl.classList.add("show");
-            setTimeout(() => toastEl.classList.remove("show"), 2000);
-          }
-        }
-      };
-
-      if(btn) btn.classList.add("visible");
-    } catch(e) {
-      console.error("Firebase Initialization Error:", e);
-    }
+    window.addEventListener("scroll", () => {
+      if(window.scrollY > 30) {
+        if(btn) btn.classList.add("visible");
+      } else {
+        if(btn) btn.classList.remove("visible");
+      }
+    });
   });
 })();
