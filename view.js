@@ -84,7 +84,6 @@
       });
 
       window.triggerClap = function() {
-        // Mengambil nilai maxLimit dinamis langsung dari konfigurasi Blogger
         const currentConf = window.wcViewCountFbase || {};
         const maxLimit = Number(currentConf.maxLimit) || 50;
         
