@@ -405,4 +405,22 @@
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num;
   }
-})();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.location.pathname.includes('advtik.html')) {
+    const boxes = document.querySelectorAll('.box-mode');
+    if (boxes.length >= 3) {
+      boxes[0].querySelector('h4').textContent = 'Cara Mengunduh Konten TikTok';
+      boxes[0].querySelector('p').textContent = 'Tempel tautan video atau foto dari TikTok/Instagram pada kolom di atas, lalu sistem akan memproses file bersih tanpa tanda air secara otomatis.';
+
+      boxes[1].querySelector('h4').textContent = 'Tentang TikTok';
+      boxes[1].querySelector('p').textContent = 'Gunakan tool ini untuk menyimpan video atau galeri foto dalam kualitas HD langsung ke perangkat Anda dengan mudah dan cepat tanpa aplikasi tambahan.';
+
+      boxes[2].querySelector('h4').textContent = 'Suka dengan Tool Ini?';
+      boxes[2].querySelector('p').innerHTML = 'Ingin membuat halaman downloader sendiri di blog Anda? Pelajari cara mengintegrasikannya dengan mudah di <a href="https://advsl.blogspot.com/">situs utama</a>.';
+    }
+  }
+
+  initFaqAnimations();
+});();
