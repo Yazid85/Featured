@@ -1,0 +1,241 @@
+<script type='text/javascript'>
+  //<![CDATA[
+window.TemplateSetting = {
+    // Pengaturan Quick Edit
+    quickSt: {
+      QuickE: 1, // 1 = Aktif, 0 = Sembunyi
+      qeBlogData: window.qeDataRaw,
+      qeSetting: {
+        "posts": true,
+        "stats": true,
+        "comments": true,
+        "layout": true,
+        "theme_edit": true,
+        "theme_custom": true,
+        "settings": true,
+        "backup": true,
+        "feed": true,
+        "rich_test": true,
+        "amp_test": true,
+        "pagespeed": true,
+        "edit_post": true,
+        "favicon": true,
+        "cache_purge": true
+      }
+    },
+}
+//]]>
+</script>
+<script type='text/javascript'>
+  window.qeDataRaw = {
+    blogId: &quot;<data:blog.blogId/>&quot;,
+    postId: &quot;<data:view.postId/>&quot;,
+    pageId: &quot;<data:view.pageId/>&quot;,
+    isSingleItem: &quot;<data:view.isSingleItem/>&quot; === &quot;true&quot;,
+    currentUrl: &quot;<data:view.url.canonical.escaped/>&quot;
+  };
+</script>
+
+<script type='text/javascript'>
+//<![CDATA[
+(function() {
+  function initQuickEdit() {
+    // 1. Ambil Setting dengan aman dari window (Mendukung TemplateSetting.quickSt & fallback lama)
+    var tSetting = window.TemplateSetting || {};
+    var qSt = tSetting.quickSt || tSetting; // Prioritaskan objek quickSt jika ada
+    
+    var rawData = window.qeDataRaw || qSt.qeBlogData || tSetting.qeBlogData || {};
+    var qeSettings = qSt.qeSetting || tSetting.qeSetting || {};
+
+    // 2. Deteksi Akses Admin via Parameter URL (?admin=1)
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === '1') {
+      localStorage.setItem('advsl_admin_session', 'true');
+    }
+
+    // 3. Cek Status Admin & Sakelar QuickE
+    var isAdmin = urlParams.get('admin') === '1' || localStorage.getItem('advsl_admin_session') === 'true';
+    var quickEVal = qSt.QuickE !== undefined ? qSt.QuickE : tSetting.QuickE;
+    var isEnabled = (quickEVal == 1) || (quickEVal === undefined); // Default aktif jika tidak terdefinisi
+
+    if (!isAdmin || !isEnabled) return;
+
+    // 4. Inject CSS Stylesheet jika belum ada
+    if (!document.getElementById('qe-auto-styles')) {
+      var style = document.createElement('style');
+      style.id = 'qe-auto-styles';
+      style.innerHTML = `
+        .qeF { position: fixed !important; bottom: 70px !important; inset-inline-end: 70px !important; z-index: 999999 !important; animation: opaCity 0.3s 0s !important; -webkit-tap-highlight-color: transparent !important; outline: none !important; }
+        .qeF svg { width: 18px !important; height: 18px !important; stroke: currentColor !important; fill: none !important; stroke-width: 1.8 !important; -webkit-tap-highlight-color: transparent !important; }
+        .qeT, .qeL > * { display: flex !important; align-items: center !important; justify-content: center !important; width: 36px !important; height: 36px !important; background: var(--contentB, #ffffff) !important; color: inherit !important; border: 1px solid var(--contentL, #dadce0) !important; border-radius: 50% !important; cursor: pointer !important; box-sizing: border-box !important; outline: none !important; -webkit-tap-highlight-color: transparent !important; }
+
+        /* Dark Mode Tombol Utama & Item Menu */
+        .drK .qeT, .drK .qeL > *, [data-theme='dark'] .qeT, [data-theme='dark'] .qeL > * { background: var(--drk-contentB, #1e1e1e) !important; border-color: var(--drk-contentL, #333333) !important; color: var(--drk-color, #e0e0e0) !important; }
+
+        .qeL > * { position: absolute !important; bottom: 2px !important; inset-inline-end: 2px !important; width: 32px !important; height: 32px !important; visibility: hidden !important; opacity: 0 !important; transition: var(--trans-2, all 0.25s ease) !important; transition-property: inset, bottom, visibility, opacity !important; z-index: -1 !important; }
+
+        /* Tooltip (Title) Light Mode Default */
+        .qeL > *::before { content: attr(title) !important; position: absolute !important; inset-inline-end: 36px !important; padding: 2px 8px !important; background: var(--contentB, #ffffff) !important; color: var(--color, #333333) !important; font-size: 12px !important; border-radius: 4px !important; border: 1px solid var(--contentL, #dadce0) !important; white-space: nowrap !important; visibility: hidden !important; opacity: 0 !important; transition: var(--trans-1, all 0.2s ease) !important; pointer-events: none !important; }
+
+        /* Tooltip (Title) Dark Mode - Paksa Warna & Background Gelap */
+        .drK .qeL > *::before, 
+        [data-theme='dark'] .qeL > *::before,
+        .drK .qeF .qeL > *::before { 
+          background: #1e1e1e !important; 
+          border-color: #333333 !important; 
+          color: #ffffff !important; 
+        }
+
+        .qeL > *:hover::before { visibility: visible !important; opacity: 1 !important; inset-inline-end: 40px !important; }
+        .qeF.active .qeL > * { visibility: visible !important; opacity: 1 !important; }
+        .qeF.active .qeL >:nth-child(1){z-index:-1 !important;bottom:42px !important;inset-inline-end:2px !important}
+        .qeF.active .qeL >:nth-child(2){z-index:-2 !important;bottom:42px !important;inset-inline-end:42px !important}
+        .qeF.active .qeL >:nth-child(3){z-index:-3 !important;bottom:42px !important;inset-inline-end:80px !important}
+        .qeF.active .qeL >:nth-child(4){z-index:-4 !important;bottom:42px !important;inset-inline-end:118px !important}
+        .qeF.active .qeL >:nth-child(5){z-index:-1 !important;bottom:80px !important;inset-inline-end:2px !important}
+        .qeF.active .qeL >:nth-child(6){z-index:-2 !important;bottom:80px !important;inset-inline-end:42px !important}
+        .qeF.active .qeL >:nth-child(7){z-index:-3 !important;bottom:80px !important;inset-inline-end:80px !important}
+        .qeF.active .qeL >:nth-child(8){z-index:-4 !important;bottom:80px !important;inset-inline-end:118px !important}
+        .qeF.active .qeL >:nth-child(9){z-index:-1 !important;bottom:118px !important;inset-inline-end:2px !important}
+        .qeF.active .qeL >:nth-child(10){z-index:-2 !important;bottom:118px !important;inset-inline-end:42px !important}
+        .qeF.active .qeL >:nth-child(11){z-index:-3 !important;bottom:118px !important;inset-inline-end:80px !important}
+        .qeF.active .qeL >:nth-child(12){z-index:-4 !important;bottom:118px !important;inset-inline-end:118px !important}
+        .qeF.active .qeL >:nth-child(13){z-index:-1 !important;bottom:156px !important;inset-inline-end:2px !important}
+        .qeF.active .qeL >:nth-child(14){z-index:-2 !important;bottom:156px !important;inset-inline-end:42px !important}
+        .qeF.active .qeL >:nth-child(15){z-index:-3 !important;bottom:156px !important;inset-inline-end:80px !important}
+        .qeT { position: relative !important; z-index: 10 !important; }
+        .qe-ic-gear, .qe-ic-close { position: absolute !important; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease !important; }
+        .qe-ic-gear { transform: rotate(0deg) scale(1) !important; opacity: 1 !important; }
+        .qe-ic-close { transform: rotate(-180deg) scale(0) !important; opacity: 0 !important; }
+        .qeF.active .qe-ic-gear { transform: rotate(180deg) scale(0) !important; opacity: 0 !important; }
+        .qeF.active .qe-ic-close { transform: rotate(0deg) scale(1) !important; opacity: 1 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // 5. Normalisasi Variabel ID
+    var blogId = rawData.blogId || '';
+    var postId = rawData.postId || '';
+    var pageId = rawData.pageId || '';
+    var isSingleItem = rawData.isSingleItem === true || rawData.isSingleItem === 'true';
+    var currentUrl = encodeURIComponent(rawData.currentUrl || window.location.href);
+
+    // 6. Buat Container Tombol jika belum ada
+    var qeBtn = document.getElementById('quick-edit-btn');
+    if (!qeBtn) {
+      qeBtn = document.createElement('div');
+      qeBtn.id = 'quick-edit-btn';
+      qeBtn.className = 'qeF';
+      qeBtn.innerHTML = `
+        <div class='qeL'></div>
+        <button id='qe-toggle' class='qeT' type='button' aria-label='Quick Edit'>
+          <svg class='qe-ic-gear' viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>
+          <svg class='qe-ic-close' viewBox='0 0 24 24'><line x1='18' y1='6' x2='6' y2='18'></line><line x1='6' y1='6' x2='18' y2='18'></line></svg>
+        </button>`;
+      document.body.appendChild(qeBtn);
+    }
+
+    var qeMenu = qeBtn.querySelector('.qeL');
+
+    // 7. Pemetaan Link Master
+    var masterItems = {
+      posts: { id: "posts", title: "Posts", url: "https://www.blogger.com/blog/posts/" + blogId, ic: "<svg viewBox='0 0 24 24'><rect x='3' y='3' width='7' height='7'></rect><rect x='14' y='3' width='7' height='7'></rect><rect x='14' y='14' width='7' height='7'></rect><rect x='3' y='14' width='7' height='7'></rect></svg>" },
+      stats: { id: "stats", title: "Stats", url: "https://www.blogger.com/blog/stats/week/" + blogId, ic: "<svg viewBox='0 0 24 24'><line x1='18' y1='20' x2='18' y2='10'></line><line x1='12' y1='20' x2='12' y2='4'></line><line x1='6' y1='20' x2='6' y2='14'></line></svg>" },
+      comments: { id: "comments", title: "Comments", url: "https://www.blogger.com/blog/comments/" + blogId, ic: "<svg viewBox='0 0 24 24'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'></path></svg>" },
+      layout: { id: "layout", title: "Layout", url: "https://www.blogger.com/blog/layout/" + blogId, ic: "<svg viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' rx='2'/><path d='M3 9h18'/><path d='M9 21V9'/></svg>" },
+      theme_edit: { id: "theme_edit", title: "Edit Theme HTML", url: "https://www.blogger.com/blog/themes/edit/" + blogId, ic: "<svg viewBox='0 0 24 24'><polyline points='16 18 22 12 16 6'></polyline><polyline points='8 6 2 12 8 18'></polyline></svg>" },
+      theme_custom: { id: "theme_custom", title: "Theme Customizer", url: "https://www.blogger.com/blog/themes/customizer/" + blogId, ic: "<svg viewBox='0 0 24 24'><path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/></svg>" },
+      settings: { id: "settings", title: "Settings", url: "https://www.blogger.com/blog/settings/" + blogId, ic: "<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg>" },
+      backup: { id: "backup", title: "Download Backup", url: "https://www.blogger.com/blogger-nongwt.g?blogID=" + blogId + "&action=download", ic: "<svg viewBox='0 0 24 24'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'></path><polyline points='7 10 12 15 17 10'></polyline><line x1='12' y1='15' x2='12' y2='3'></line></svg>" },
+      feed: { id: "feed", title: "Feed Archive", url: "https://www.blogger.com/feeds/" + blogId + "/posts/default", ic: "<svg viewBox='0 0 24 24'><path d='M4 11a9 9 0 0 1 9 9'></path><path d='M4 4a16 16 0 0 1 16 16'></path><circle cx='5' cy='19' r='1'></circle></svg>" },
+      rich_test: { id: "rich_test", title: "Rich Results", url: "https://search.google.com/test/rich-results?url=" + currentUrl, ic: "<svg viewBox='0 0 24 24'><polyline points='9 11 12 14 22 4'></polyline><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'></path></svg>" },
+      amp_test: { id: "amp_test", title: "AMP Test", url: "https://search.google.com/test/amp?url=" + currentUrl, ic: "<svg viewBox='0 0 24 24'><polygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'></polygon></svg>" },
+      pagespeed: { id: "pagespeed", title: "PageSpeed", url: "https://pagespeed.web.dev/analysis?url=" + currentUrl, ic: "<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='10'></circle><polyline points='12 6 12 12 16 14'></polyline></svg>" },
+      favicon: { id: "favicon", title: "Favicon Editor", url: "https://www.blogger.com/blog/settings/" + blogId, ic: "<svg viewBox='0 0 24 24'><rect x='3' y='3' width='18' height='18' rx='2'/><circle cx='12' cy='12' r='4'/></svg>" },
+      cache_purge: { id: "cache_purge", title: "Cache Purge", action: "purge", ic: "<svg viewBox='0 0 24 24'><polyline points='1 4 1 10 7 10'></polyline><path d='M3.51 15a9 9 0 1 0 2.13-9.36L1 10'></path></svg>" }
+    };
+
+    // 8. Filter elemen aktif
+    var activeKeys = Object.keys(masterItems).filter(function(key) {
+      return qeSettings[key] === true;
+    });
+
+    var activeItems = activeKeys.map(function(key) { return masterItems[key]; });
+
+    // 9. Tombol Edit Halaman Tunggal
+    if (isSingleItem && qeSettings['edit_post'] === true) {
+      var directEditUrl = "";
+      if (pageId && pageId !== "" && pageId !== "null") {
+        directEditUrl = "https://www.blogger.com/blog/page/edit/" + blogId + "/" + pageId;
+      } else if (postId && postId !== "" && postId !== "null") {
+        directEditUrl = "https://www.blogger.com/blog/post/edit/" + blogId + "/" + postId;
+      }
+
+      if (directEditUrl !== "") {
+        activeItems.unshift({
+          id: "edit_post",
+          title: "Edit Artikel",
+          url: directEditUrl,
+          ic: "<svg viewBox='0 0 24 24'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'></path><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'></path></svg>"
+        });
+      }
+    }
+
+    // 10. Generate HTML Output
+    var htmlOutput = "";
+    for (var i = 0; i < activeItems.length; i++) {
+      var item = activeItems[i];
+      if (item.action === "purge") {
+        htmlOutput += "<button type='button' title='" + item.title + "' data-action='purge'>" + item.ic + "</button>";
+      } else {
+        htmlOutput += "<a href='" + item.url + "' target='_blank' rel='noopener' title='" + item.title + "'>" + item.ic + "</a>";
+      }
+    }
+
+    qeMenu.innerHTML = htmlOutput;
+
+    // 11. Event Listener
+    var qeToggle = document.getElementById('qe-toggle');
+    var allActions = qeMenu.querySelectorAll('a, button');
+
+    allActions.forEach(function(actionEl) {
+      actionEl.addEventListener('click', function(ev) {
+        if (actionEl.getAttribute('data-action') === 'purge') {
+          ev.preventDefault();
+          ev.stopPropagation();
+          localStorage.clear();
+          sessionStorage.clear();
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var j = 0; j < names.length; j++) {
+                caches.delete(names[j]);
+              }
+            });
+          }
+          window.location.reload(true);
+        }
+      });
+    });
+
+    qeToggle.onclick = function(ev) {
+      ev.stopPropagation();
+      qeBtn.classList.toggle('active');
+    };
+
+    document.addEventListener('click', function(ev) {
+      var isDarkModeBtn = ev.target.closest('.tDark') || ev.target.closest('.drK');
+      if (!qeBtn.contains(ev.target) && !isDarkModeBtn) {
+        qeBtn.classList.remove('active');
+      }
+    });
+  }
+
+  // 12. Jalankan aman saat window/DOM siap
+  if (document.readyState === 'complete') {
+    initQuickEdit();
+  } else {
+    window.addEventListener('load', initQuickEdit);
+  }
+})();
+//]]>
+</script>
